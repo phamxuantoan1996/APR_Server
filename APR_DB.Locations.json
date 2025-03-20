@@ -1,0 +1,48 @@
+[{
+  "_id": 1,
+  "point1": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 2,
+  "point1": "LM2",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 3,
+  "point1": "LM3",
+  "lift_level1": 70,
+  "lift_level2": 750
+},
+{
+  "_id": 4,
+  "point1": "LM4",
+  "lift_level1": 55,
+  "lift_level2": 750
+},
+{
+  "_id": 5,
+  "point1": "LM5",
+  "lift_level1": 75,
+  "lift_level2": 750
+},
+{
+  "_id": 6,
+  "point1": "LM6",
+  "lift_level1": 60,
+  "lift_level2": 750
+},
+{
+  "_id": 7,
+  "point1": "LM7",
+  "lift_level1": 65,
+  "lift_level2": 750
+},
+{
+  "_id": 8,
+  "point1": "LM8",
+  "lift_level1": 40,
+  "lift_level2": 750
+}]
