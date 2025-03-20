@@ -121,7 +121,7 @@ if __name__ == '__main__':
     else:
         print("MongoDB Init Error.")
 
-    server_call = Server_Call(host='192.168.1.4',port=5000,timeout=60,max_client=8)
+    server_call = Server_Call(host='192.168.102.205',port=5000,timeout=60,max_client=8)
     server_call.server_call_start()
 
  

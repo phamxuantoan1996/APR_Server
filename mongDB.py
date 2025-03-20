@@ -1,5 +1,5 @@
+#!/usr/bin/python3
 import pymongo
-
 class MongoDataBase:
     def __init__(self,database_name:str,collections_name:list) -> None:
         self.clientMongo = pymongo.MongoClient('mongodb://localhost:27017/')
