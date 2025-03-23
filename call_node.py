@@ -59,38 +59,48 @@ class Server_Call:
 
 def task_poll_call_func(c : socket.socket,addr):
     c.settimeout(20)
-    global Call_Response_List
-    index = 0
-    for call in Call_Response_List:
-        if call['call_addr'] == addr[0]:
-            break
-        index = index + 1
     while True:
         recv_data = ''
         try:
             recv_data = c.recv(1024)
-            # print(recv_data)
             if len(recv_data) == 0:
                 break
             else:
                 recv_data_string = recv_data.decode('utf-8').split('}')[0] + '}'
                 json_data_dict = json.loads(recv_data_string)
-                # {"call":1}
-                print(addr[0]," : ",json_data_dict," : ",index)
+                # {"floor1":0,"floor2":0,response_transfer:0}
+                print(addr[0]," : ",json_data_dict)
                 keys = json_data_dict.keys()
-                if "call" in keys:
+                if "floor1" in keys and "floor2" in keys and "response_transfer" in keys:
                     try:
-                        val = int(json_data_dict['call'])
-                        apr_db.MongoDB_update(collection_name="Call_Signal_Request",query={"call_addr":str(addr[0])},data={"call_request":val})
-                        response = Call_Response_List[index]['call_response']
-                        print(response)
-                        c.send(json.dumps({"response":response}).encode('utf-8'))
+                        data = apr_db.MongoDB_find(collection_name="Call_Machine",query={"ip_address":str(addr[0])})[0]
+                        floor1 = int(json_data_dict['floor1'])
+                        floor2 = int(json_data_dict['floor2'])
+                        response_transfer = int(json_data_dict['response_transfer'])
+                        if data['floor1'] != floor1 and floor1 != -1:
+                            mission = apr_db.MongoDB_find(collection_name="APR_Missions",query={"ip_address":str(addr[0])})
+                            if floor1 == 0 and len(mission) > 0:
+                                if mission[0]["mission_status"] == 1:
+                                    apr_db.MongoDB_detele(collection_name="APR_Missions",data={"ip_address":str(addr[0])})
+                            elif floor1 == 1 and len(mission) == 0:
+                                apr_db.MongoDB_insert(collection_name="APR_Missions",data={"line":1,"mission_status":1,"ip_address":str(addr[0])})
+
+                        apr_db.MongoDB_update(collection_name="Call_Machine",query={"ip_address":str(addr[0])},data={"floor1":floor1,"floor2":floor2,"response_transfer":response_transfer})
+                        apr_db.MongoDB_find(collection_name="Call_Machine",query={"ip_address":str(addr[0])})[0]
+                        c.send(json.dumps({"request_transfer":data["request_transfer"]}).encode('utf-8'))
                         continue
                     except Exception as e:
-                        print('exception : call signal request')
+                        print('exception : call signal : ',str(e))
                 print('call signal data is not valid.')
         except Exception as e:
-            print("exception recv data")
+            print("exception recv data : ",str(e))
+            break
+    apr_db.MongoDB_update(collection_name="Call_Machine",query={"ip_address":str(addr[0])},data={"floor1":-1,"floor2":-1,"response_transfer":-1})
+    mission = apr_db.MongoDB_find(collection_name="APR_Missions",query={"ip_address":str(addr[0])})
+    if len(mission) > 0:
+        if mission[0]["mission_status"]:
+            apr_db.MongoDB_detele(collection_name="APR_Missions",data={"ip_address":str(addr[0])})
+        
     print('client : ' + str(addr) + ' closed!')
     Call_Addr_List.remove(addr[0])
     c.close()
@@ -107,30 +117,21 @@ def task_server_call_func():
             task_client.start()
         time.sleep(2)
 
-def task_poll_call_response_func():
-    global Call_Response_List
-    while True:
-        Call_Response_List = apr_db.MongoDB_find(collection_name="Call_Signal_Response",query={})
-        time.sleep(1)
 
 if __name__ == '__main__':
     
-    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["Call_Signal_Request","Call_Signal_Response"])
+    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["Call_Machine","APR_Missions"])
 
     if apr_db.MongoDB_Init():
         print("MongoDB Init Success.")
     else:   
         print("MongoDB Init Error.")
 
-    server_call = Server_Call(host='192.168.68.121',port=5000,timeout=60,max_client=8)
+    server_call = Server_Call(host='192.168.1.10',port=5000,timeout=60,max_client=8)
     server_call.server_call_start()
 
- 
     task_server_call = Thread(target=task_server_call_func,args=())
     task_server_call.start()
-
-    task_poll_call_response = Thread(target=task_poll_call_response_func,args=())
-    task_poll_call_response.start()
 
     
 

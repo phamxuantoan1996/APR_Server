@@ -115,7 +115,7 @@ if __name__ == '__main__':
         log.writeLog(type_log="error",msg="APR Server Init")
 
 
-    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["Call_Machine","APR_Status","Locations"])
+    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["Call_Machine","APR_Status","Locations","APR_Missions"])
     if apr_db.MongoDB_Init():
         print("MongoDB Init Success.")
     else:
