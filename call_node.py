@@ -69,27 +69,28 @@ def task_poll_call_func(c : socket.socket,addr):
         recv_data = ''
         try:
             recv_data = c.recv(1024)
+            # print(recv_data)
             if len(recv_data) == 0:
                 break
             else:
                 recv_data_string = recv_data.decode('utf-8').split('}')[0] + '}'
                 json_data_dict = json.loads(recv_data_string)
                 # {"call":1}
-                print(json_data_dict)
+                print(addr[0]," : ",json_data_dict," : ",index)
                 keys = json_data_dict.keys()
                 if "call" in keys:
                     try:
                         val = int(json_data_dict['call'])
-                        apr_db.MongoDB_update(collection_name="Call_Signal_Request",query={"call_addr":"192.168.1.8"},data={"call_request":val})
+                        apr_db.MongoDB_update(collection_name="Call_Signal_Request",query={"call_addr":str(addr[0])},data={"call_request":val})
                         response = Call_Response_List[index]['call_response']
+                        print(response)
                         c.send(json.dumps({"response":response}).encode('utf-8'))
                         continue
                     except Exception as e:
-                        pass
+                        print('exception : call signal request')
                 print('call signal data is not valid.')
-                
         except Exception as e:
-            break
+            print("exception recv data")
     print('client : ' + str(addr) + ' closed!')
     Call_Addr_List.remove(addr[0])
     c.close()
@@ -118,10 +119,10 @@ if __name__ == '__main__':
 
     if apr_db.MongoDB_Init():
         print("MongoDB Init Success.")
-    else:
+    else:   
         print("MongoDB Init Error.")
 
-    server_call = Server_Call(host='192.168.102.205',port=5000,timeout=60,max_client=8)
+    server_call = Server_Call(host='192.168.68.121',port=5000,timeout=60,max_client=8)
     server_call.server_call_start()
 
  
