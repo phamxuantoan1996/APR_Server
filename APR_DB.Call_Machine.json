@@ -1,0 +1,85 @@
+[{
+  "_id": 1,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "ip_address": "192.168.1.13",
+  "response_transfer": -1,
+  "point": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 2,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "response_transfer": 0,
+  "ip_address": "",
+  "point": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 3,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "response_transfer": 0,
+  "ip_address": "",
+  "point": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 4,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "response_transfer": 0,
+  "ip_address": ""
+},
+{
+  "_id": 5,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "response_transfer": 0,
+  "ip_address": "",
+  "point": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 6,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "response_transfer": 0,
+  "ip_address": "",
+  "point": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 7,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "response_transfer": 0,
+  "ip_address": "",
+  "point": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+},
+{
+  "_id": 8,
+  "floor1": -1,
+  "floor2": -1,
+  "request_transfer": 0,
+  "response_transfer": 0,
+  "ip_address": "",
+  "point": "LM1",
+  "lift_level1": 50,
+  "lift_level2": 750
+}]
