@@ -5,36 +5,9 @@ from mongDB import MongoDataBase
 
 import json
 import time
+import random
 
 Call_Addr_List = []
-Call_Response_List = []
-
-class Call_Loader:
-    def __init__(self,ip:str):
-        self.__call_ip = ip
-        self.__call_request = -1
-        self.__call_response = -1
-
-    @property
-    def call_ip(self) -> str:
-        return self.__call_ip
-    @call_ip.setter
-    def call_ip(self,ip:str):
-        self.__call_ip = ip
-    
-    @property
-    def call_response(self) -> int:
-        return self.__call_response
-    @call_response.setter
-    def call_response(self,val:int):
-        self.__call_response = val
-
-    @property
-    def call_request(self) -> int:
-        return self.__call_request
-    @call_request.setter
-    def call_request(self,val:int):
-        self.__call_request = val
 
 class Server_Call:
     def __init__(self,host:str,port:int,timeout:int,max_client:int) -> None:
@@ -83,8 +56,7 @@ def task_poll_call_func(c : socket.socket,addr):
                                 if mission[0]["mission_status"] == 1:
                                     apr_db.MongoDB_detele(collection_name="APR_Missions",data={"ip_address":str(addr[0])})
                             elif floor1 == 1 and len(mission) == 0:
-                                apr_db.MongoDB_insert(collection_name="APR_Missions",data={"line":1,"mission_status":1,"ip_address":str(addr[0])})
-
+                                apr_db.MongoDB_insert(collection_name="APR_Missions",data={"line":1,"mission_status":1,"ip_address":str(addr[0]),"_id":random.randint(0,9999999999)})
                         apr_db.MongoDB_update(collection_name="Call_Machine",query={"ip_address":str(addr[0])},data={"floor1":floor1,"floor2":floor2,"response_transfer":response_transfer})
                         apr_db.MongoDB_find(collection_name="Call_Machine",query={"ip_address":str(addr[0])})[0]
                         c.send(json.dumps({"request_transfer":data["request_transfer"]}).encode('utf-8'))
@@ -98,7 +70,7 @@ def task_poll_call_func(c : socket.socket,addr):
     apr_db.MongoDB_update(collection_name="Call_Machine",query={"ip_address":str(addr[0])},data={"floor1":-1,"floor2":-1,"response_transfer":-1})
     mission = apr_db.MongoDB_find(collection_name="APR_Missions",query={"ip_address":str(addr[0])})
     if len(mission) > 0:
-        if mission[0]["mission_status"]:
+        if mission[0]["mission_status"] != 2:
             apr_db.MongoDB_detele(collection_name="APR_Missions",data={"ip_address":str(addr[0])})
         
     print('client : ' + str(addr) + ' closed!')
@@ -112,6 +84,12 @@ def task_server_call_func():
         try:
             Call_Addr_List.index(addr[0])
         except Exception as e:
+            status = apr_db.MongoDB_find(collection_name="APR_Status",query={"_id":1})[0]
+            line_active = status["line_active"]
+            call_machine = apr_db.MongoDB_find(collection_name="Call_Machine",query={"ip_address":addr[0]})[0]
+            if not (call_machine["_id"] in line_active):
+                c.close()
+                continue
             Call_Addr_List.append(addr[0])
             task_client = Thread(target=task_poll_call_func,args=(c,addr))
             task_client.start()
@@ -120,14 +98,14 @@ def task_server_call_func():
 
 if __name__ == '__main__':
     
-    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["Call_Machine","APR_Missions"])
+    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["APR_Status","Call_Machine","APR_Missions"])
 
     if apr_db.MongoDB_Init():
         print("MongoDB Init Success.")
     else:   
         print("MongoDB Init Error.")
 
-    server_call = Server_Call(host='192.168.1.10',port=5000,timeout=60,max_client=8)
+    server_call = Server_Call(host='192.168.1.54',port=5000,timeout=60,max_client=8)
     server_call.server_call_start()
 
     task_server_call = Thread(target=task_server_call_func,args=())
