@@ -9,8 +9,9 @@ import json
 import time
 
 
-Pos_Idle_Manual_Mode = "LM4"
-Pos_Idle_Auto_Mode = "LM1"
+Pos_Idle1_Manual_Mode = "LM6"
+Pos_Idle2_Manual_Mode = "LM5"
+Pos_Idle_Auto_Mode = "LM4"
 Pos_Warehouse = "LM5"
 
 app = Flask(__name__)
@@ -30,7 +31,7 @@ def task_chain_generate(task_list:list,apr_mode:str,line:int) -> list:
             if task["task_name"] == "pick":
                 task_chain.append({"task_name":"pick","level_lift":lift_level2})
             elif task["task_name"] == "put":
-                task_chain.append({"task_name":"pick","level_lift":lift_level1})
+                task_chain.append({"task_name":"put","level_lift":lift_level1})
             elif task["task_name"] == "navigation":
                 task_chain.append({"task_name":"navigation_block","target_point":point})
             elif task["task_name"] == "warehouse":
@@ -39,7 +40,8 @@ def task_chain_generate(task_list:list,apr_mode:str,line:int) -> list:
                 if apr_mode == "Auto":
                     task_chain.append({"task_name":"navigation_block","target_point":Pos_Idle_Auto_Mode})
                 elif apr_mode == "Manual":
-                    task_chain.append({"task_name":"navigation_block","target_point":Pos_Idle_Manual_Mode})
+                    amr_count = apr_db.MongoDB_find(collection_name="APR_Count",query={})
+                    task_chain.append({"task_name":"navigation_block","target_point":Pos_Idle1_Manual_Mode})
 
         return task_chain
     except Exception as e:
@@ -86,9 +88,15 @@ def task_auto_mode_func():
         
         time.sleep(2)
 
-@app.route('/call_request',methods=['GET'])
-def call_request():
-    return jsonify({"test":1}),200
+@app.route('/status',methods=['GET'])
+def get_status():
+    try:
+        apr_status = apr_db.MongoDB_find(collection_name="APR_Status",query={"_id":1})[0]
+        call_machine = apr_db.MongoDB_find(collection_name="Call_Machine",query={})
+        apr_status["call_machine"] = call_machine
+        return jsonify(apr_status),200
+    except Exception as e:
+        return jsonify({"result":False,"desc":str(e)}),500
 
 @app.route('/work_mode',methods=['POST'])
 def apr_mode():
@@ -117,13 +125,21 @@ def send_mission():
         apr_status = apr_db.MongoDB_find(collection_name="APR_Status",query={"_id":1})[0]
         apr_mode = apr_status['work_mode']
         apr_task_chain_status = apr_status['task_chain_status']
-
         if "task_list" in keys and apr_mode == "Manual" and apr_task_chain_status != 2:
             task_chain = task_chain_generate(content["task_list"],apr_mode="Manual",line=None)
             if len(task_chain) > 0:
                 if send_task_chain_apr(task_chain):
+                    apr_db.MongoDB_update(collection_name="APR_Status",query={"_id":1},data={"mission_recv":content})
                     return jsonify({"result":True,"desc":""}),201
         return jsonify({"result":False,"desc":""}),200
+    except Exception as e:
+        return jsonify({"result":False,"desc":str(e)}),500
+
+@app.route('/cancel',methods=['POST'])
+def cancel_mission():
+    try:
+        apr_db.MongoDB_update(collection_name="APR_Status",query={"_id":1},data={"mission_recv":{},"signal_cancel":1,"task_chain":[],"task_index":0})
+        return jsonify({"result":True}),201
     except Exception as e:
         return jsonify({"result":False,"desc":str(e)}),500
     
@@ -134,7 +150,7 @@ if __name__ == '__main__':
     if log.init_logfile():
         log.writeLog(type_log="error",msg="APR Server Init")
 
-    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["Call_Machine","APR_Status","Locations","APR_Missions"])
+    apr_db = MongoDataBase(database_name="APR_DB",collections_name=["Call_Machine","APR_Status","Locations","APR_Missions","APR_Count"])
     if apr_db.MongoDB_Init():
         print("MongoDB Init Success.")
     else:

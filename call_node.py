@@ -86,7 +86,13 @@ def task_server_call_func():
         except Exception as e:
             status = apr_db.MongoDB_find(collection_name="APR_Status",query={"_id":1})[0]
             line_active = status["line_active"]
-            call_machine = apr_db.MongoDB_find(collection_name="Call_Machine",query={"ip_address":addr[0]})[0]
+            
+            call_machines = apr_db.MongoDB_find(collection_name="Call_Machine",query={"ip_address":addr[0]})
+            if len(call_machines) == 0:
+                c.close()
+                continue
+            call_machine = call_machines[0]
+            
             if not (call_machine["_id"] in line_active):
                 c.close()
                 continue
@@ -105,7 +111,7 @@ if __name__ == '__main__':
     else:   
         print("MongoDB Init Error.")
 
-    server_call = Server_Call(host='192.168.1.54',port=5000,timeout=60,max_client=8)
+    server_call = Server_Call(host='192.168.133.176',port=5000,timeout=60,max_client=8)
     server_call.server_call_start()
 
     task_server_call = Thread(target=task_server_call_func,args=())
