@@ -88,6 +88,17 @@ def task_auto_mode_func():
         
         time.sleep(2)
 
+def readLogDB(date:str) -> list:
+    logs = apr_db.MongoDB_find(collection_name="Logfile",query={"date":date})
+    for i in range(0,len(logs)):
+        logs[i].pop("_id")
+    return logs
+
+def deleteLogDB(date:str) -> int:
+    num = apr_db.MongoDB_detele(collection_name="Logfile",data={"date":date})
+    return num
+
+# ---------------- API ---------------------------------------
 @app.route('/status',methods=['GET'])
 def get_status():
     try:
@@ -116,7 +127,6 @@ def apr_mode():
         print('send mode apr exception.')
         return jsonify({"result":False,"desc":str(e)}),500
 
-    
 @app.route('/task_chain',methods=['POST'])
 def send_mission():
     try:
@@ -143,7 +153,37 @@ def cancel_mission():
     except Exception as e:
         return jsonify({"result":False,"desc":str(e)}),500
     
+@app.route('/logs',methods = ['GET'])
+def get_log():
+    try:
+        date = request.args.get("date")
+        logs = readLogDB(date=date)
+        return jsonify(logs),200
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
 
+@app.route('/logs',methods = ['DELETE'])
+def delete_log():
+    try:
+        date = request.args.get("date")
+        num = deleteLogDB(date=date)
+        return jsonify({"result":num}),200
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
+
+# {
+#     "line_activate" : [0,0,0,0,0,0,0,1,1]
+# }
+@app.route('/line_activate',methods = ['POST'])
+def line_active():
+    try:
+        content = request.json
+        if "line_activate" in content.keys():
+            if len(content['line_activate']) == 8:
+                apr_db.MongoDB_update(collection_name="APR_Status",query={'_id':1},data={'line_activate':content['line_activate']})
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
+# ------------------------------------------------------------
 if __name__ == '__main__':
 
     log = LogFile(path_dir_log="Logfile")
