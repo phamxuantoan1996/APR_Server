@@ -40,9 +40,13 @@ def task_chain_generate(task_list:list,apr_mode:str,line:int) -> list:
                 if apr_mode == "Auto":
                     task_chain.append({"task_name":"navigation_block","target_point":Pos_Idle_Auto_Mode})
                 elif apr_mode == "Manual":
-                    amr_count = apr_db.MongoDB_find(collection_name="APR_Count",query={})
-                    task_chain.append({"task_name":"navigation_block","target_point":Pos_Idle1_Manual_Mode})
-
+                    amr_count = apr_db.MongoDB_find(collection_name="APR_Count",query={})[0]
+                    if amr_count["standby"] == "" or amr_count["standby"] == Pos_Idle2_Manual_Mode:
+                        task_chain.append({"task_name":"navigation_block","target_point":Pos_Idle1_Manual_Mode})
+                        apr_db.MongoDB_update(collection_name="APR_Count",query={"_id":1},data={"standby":Pos_Idle1_Manual_Mode})
+                    else:
+                        task_chain.append({"task_name":"navigation_block","target_point":Pos_Idle2_Manual_Mode})
+                        apr_db.MongoDB_update(collection_name="APR_Count",query={"_id":1},data={"standby":Pos_Idle1_Manual_Mode})
         return task_chain
     except Exception as e:
         print("exception in generate task chain : ",str(e))
@@ -82,10 +86,8 @@ def task_auto_mode_func():
                     task_chain = task_chain_generate(mission["task_list"],apr_mode="Auto",line=apr_missions[0]["line"])
                     if apr_db.MongoDB_update(collection_name="APR_Status",query={"_id":1},data={"mission_recv":mission,"task_chain":task_chain}):
                         apr_db.MongoDB_update(collection_name="APR_Status",query={"_id":1},data={"task_chain_status":0})
-
         except Exception as e:
             print("exception in task auto mode : ",str(e))
-        
         time.sleep(2)
 
 def readLogDB(date:str) -> list:
@@ -195,6 +197,7 @@ if __name__ == '__main__':
         print("MongoDB Init Success.")
     else:
         print("MongoDB Init Error")
+    apr_db.MongoDB_detele(collection_name="APR_Missions",data={"mission_status":2})
 
     task_auto_mode = Thread(target=task_auto_mode_func,args=())
     task_auto_mode.start()

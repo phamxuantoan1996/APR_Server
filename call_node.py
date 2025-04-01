@@ -30,42 +30,64 @@ class Server_Call:
     def server(self) -> socket.socket:
         return self.__server
 
-
 def task_poll_call_func(c : socket.socket,addr):
     c.settimeout(20)
+    recv_string_total = ''
     while True:
-        recv_data = ''
         try:
             recv_data = c.recv(1024)
             if len(recv_data) == 0:
                 break
             else:
-                recv_data_string = recv_data.decode('utf-8').split('}')[0] + '}'
-                json_data_dict = json.loads(recv_data_string)
-                # {"floor1":0,"floor2":0,response_transfer:0}
-                print(addr[0]," : ",json_data_dict)
+                recv_string = recv_data.decode('utf-8')
+                if '/' in recv_string:
+                    temp = recv_string.split('/')[0]
+                    recv_string_total = recv_string_total + temp
+                else:
+                    recv_string_total = recv_string_total + recv_string
+                    continue
+                # print(recv_string_total)
+                json_data_dict = json.loads(recv_string_total)
+                # print(json_data_dict)
+                
                 keys = json_data_dict.keys()
-                if "floor1" in keys and "floor2" in keys and "response_transfer" in keys:
+                if "Call ID" in keys and "button" in keys and "input" in keys:
                     try:
                         machine = apr_db.MongoDB_find(collection_name="Call_Machine",query={"ip_address":str(addr[0])})[0]
                         if apr_status["line_activate"][machine["_id"] - 1] == 0:
                             break
-                        floor1 = int(json_data_dict['floor1'])
-                        floor2 = int(json_data_dict['floor2'])
-                        response_transfer = int(json_data_dict['response_transfer'])
-                        if machine['floor1'] != floor1 and floor1 != -1:
+                        floor1 = 0
+                        floor2 = 0
+                        output = []
+                        for btn in json_data_dict['button']:
+                            if btn["status"]:
+                                output.append(1)
+                            else:
+                                output.append(0)
+                        for input in json_data_dict['input']:
+                            if input["id"] == 0:
+                                if input['status']:
+                                    floor1 = 1
+                                else:
+                                    floor1 = 0
+                            elif input["id"] == 1:
+                                if input['status']:
+                                    floor2 = 1
+                                else:
+                                    floor2 = 0
+
+                        if machine['floor1'] != floor1:
                             mission = apr_db.MongoDB_find(collection_name="APR_Missions",query={"ip_address":str(addr[0])})
                             if floor1 == 0 and len(mission) > 0:
                                 if mission[0]["mission_status"] == 1:
                                     apr_db.MongoDB_detele(collection_name="APR_Missions",data={"ip_address":str(addr[0])})
                             elif floor1 == 1 and len(mission) == 0:
                                 apr_db.MongoDB_insert(collection_name="APR_Missions",data={"line":1,"mission_status":1,"ip_address":str(addr[0]),"_id":random.randint(0,9999999999)})
-                        apr_db.MongoDB_update(collection_name="Call_Machine",query={"ip_address":str(addr[0])},data={"floor1":floor1,"floor2":floor2,"response_transfer":response_transfer})
-                        c.send(json.dumps({"request_transfer":machine["request_transfer"]}).encode('utf-8'))
-                        continue
+                        apr_db.MongoDB_update(collection_name="Call_Machine",query={"ip_address":str(addr[0])},data={"floor1":floor1,"floor2":floor2,"response_transfer":output})
+                        c.send(json.dumps({"output":machine["request_transfer"]}).encode('utf-8'))
                     except Exception as e:
                         print('exception : call signal : ',str(e))
-                print('call signal data is not valid.')
+                recv_string_total = ''
         except Exception as e:
             print("exception recv data : ",str(e))
             break
@@ -112,12 +134,15 @@ def task_apr_status_poll_func():
 if __name__ == '__main__':
     
     apr_db = MongoDataBase(database_name="APR_DB",collections_name=["APR_Status","Call_Machine","APR_Missions"])
+
+    apr_db.MongoDB_update(collection_name="Call_Machine",query={},data={"request_transfer":[0,0,0,0]})
+
     if apr_db.MongoDB_Init():
         print("MongoDB Init Success.")
     else:   
         print("MongoDB Init Error.")
 
-    server_call = Server_Call(host='192.168.1.10',port=5000,timeout=60,max_client=8)
+    server_call = Server_Call(host='192.168.110.10',port=5000,timeout=60,max_client=8)
     server_call.server_call_start()
 
     task_server_call = Thread(target=task_server_call_func,args=())
